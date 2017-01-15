@@ -1,0 +1,104 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../paper-item/paper-item.html">
+<link rel="import" href="../paper-listbox/paper-listbox.html">
+<link rel="import" href="../paper-tabs/paper-tabs.html">
+<link rel="import" href="../paper-dropdown-menu/paper-dropdown-menu.html">
+
+<!--
+`fb-live`
+Manages Facebook live settings
+
+@demo demo/index.html 
+-->
+
+<dom-module id="fb-live">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+    <h2>Hello [[_userInfo.name]] </h2>
+
+    <paper-dropdown-menu label="Select a destination">
+      <paper-listbox class="dropdown-content" selected="{{selectedTarget}}">
+        <template is="dom-repeat" items="[[targets]]">
+          <paper-item>[[item]]</paper-item>
+        </template>
+      </paper-listbox>
+    </paper-dropdown-menu>
+
+    <paper-dropdown-menu label="Select a Page">
+      <paper-listbox class="dropdown-content">
+        <template is="dom-repeat" items="[[_userInfo.accounts]]">
+          <paper-item>[[item.name]]</paper-item>
+        </template>
+      </paper-listbox>
+    </paper-dropdown-menu>
+
+  </template>
+
+  <script>
+    Polymer({
+
+      is: 'fb-live',
+
+      //https://www.polymer-project.org/1.0/docs/devguide/properties
+      properties: {
+        //
+        userID: {
+          type: String,
+          value: 0,
+          notify:true,
+          observer: '_userIDChanged'
+        },
+        _userInfo: {
+            type: Object,
+            value: {
+                name: ", please login first"
+            }
+        },
+        targets: {
+            type: Array,
+            value: ["My timeline", "Pages", "Events"],
+            notify: true
+        },
+        selectedTarget: {
+            type:Number,
+            value: 0,
+            notify:true,
+            observer: '_selectedTargetChanged'
+        }
+      },
+
+      _userIDChanged: function(newValue, oldValue) {
+          var scope = this;
+          if ( null == window['FB']) {
+              return;
+          }
+
+          FB.api('/me', function (response) {
+              scope._userInfo = response;
+          });
+
+          FB.api('/' + scope.userID + '/accounts', function(accounts){
+              console.log(accounts);
+              scope.set('_userInfo.accounts', accounts.data);
+          });
+      },
+
+      _selectedTargetChanged: function(newValue, oldValue) {
+          console.log("Selected value is now: " + newValue);
+          switch (newValue) {
+              case 0:
+                  break;
+              case 1:
+                  break;
+          }
+      },
+
+
+
+    });
+  </script>
+</dom-module>

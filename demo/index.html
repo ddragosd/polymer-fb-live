@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>fb-live demo</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../fb-live.html">
+
+    <style is="custom-style" include="demo-pages-shared-styles">
+    </style>
+  </head>
+  <body>
+
+  <script type="text/javascript">
+      window.fbAsyncInit = function () {
+          FB.init({
+              appId: '1905352743027825',
+              xfbml: true,
+              version: 'v2.6',
+              enable_profile_selector: true,
+          });
+      };
+      // FB.AppEvents.logPageView();
+
+      (function (d, s, id) {
+          var js, fjs = d.getElementsByTagName(s)[0];
+          if (d.getElementById(id)) {
+              return;
+          }
+          js = d.createElement(s);
+          js.id = id;
+          js.src = "//connect.facebook.net/en_US/sdk.js";
+          fjs.parentNode.insertBefore(js, fjs);
+      }(document, 'script', 'facebook-jssdk'));
+
+      //{
+      // status: 'connected',
+      // authResponse: {
+      // accessToken: '...',
+      // expiresIn:'...',
+      // signedRequest:'...',
+      // userID:'...'
+      //}
+      function fb_statusChangeCallback(response) {
+          console.log("fb_statusChangeCallback");
+          console.log(response);
+          if (response.status === 'connected') {
+              document.getElementById("fb_login_button").style.display = "none";
+              var uid = response.authResponse.userID;
+              var accessToken = response.authResponse.accessToken;
+
+              document.getElementById("fb_live").userID = uid;
+
+          } else if (response.status === 'not_authorized') {
+            // the user is logged in to Facebook,
+            // but has not authenticated your app
+          } else {
+            // the user isn't logged in to Facebook.
+          }
+      }
+
+
+      function checkLoginState() {
+          FB.getLoginStatus(function (response) {
+              fb_statusChangeCallback(response);
+          });
+      }
+  </script>
+
+  <div class="vertical-section-container centered" style="height:50px">
+      <h3>Basic fb-live demo</h3>
+
+      <fb:login-button
+              id="fb_login_button"
+              scope="public_profile,email,publish_actions,manage_pages,publish_pages,publish_actions,user_managed_groups,publish_actions,user_events"
+              enable-profile-selector="true"
+              onlogin="checkLoginState();">
+      </fb:login-button>
+
+      <demo-snippet>
+        <template>
+          <fb-live id="fb_live" targets='["My timeline", "Pages"]' selected-target="1"></fb-live>
+        </template>
+      </demo-snippet>
+    </div>
+  </body>
+</html>
