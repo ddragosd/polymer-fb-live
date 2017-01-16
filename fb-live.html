@@ -1,5 +1,7 @@
 <link rel="import" href="../polymer/polymer.html">
 <link rel="import" href="../paper-item/paper-item.html">
+<link rel="import" href="../paper-item/paper-item-body.html">
+<link rel="import" href="../iron-icons/av-icons.html">
 <link rel="import" href="../paper-listbox/paper-listbox.html">
 <link rel="import" href="../paper-tabs/paper-tabs.html">
 <link rel="import" href="../paper-button/paper-button.html">
@@ -33,45 +35,98 @@ Manages Facebook live settings
                     background-color: var(--paper-pink-a200) !important;
                     color: white !important;
                 };
+                margin-top: 10px;
+            }
+
+            paper-button.stop {
+                background-color: var(--paper-pink-a200) !important;
+                color: white;
+                --paper-button-raised-keyboard-focus: {
+                    background-color: var(--paper-indigo-500);
+                    color: white !important;
+                };
+                margin-top: 10px;
+            }
+
+            .fb_title {
+                padding-bottom: 15px;
+            }
+
+            iron-icon {
+                padding-right: 10px;
             }
 
 
         </style>
         <!--<h2>Hello [[_userInfo.name]] </h2>-->
 
-        <div class="floated-label-placeholder style-scope paper-input-container">Logged in as: [[_userInfo.name]]</div>
+        <div class="floated-label-placeholder style-scope paper-input-container fb_title">
+            Logged in as: [[_userInfo.name]]
+        </div>
 
-        <paper-dropdown-menu id="targetsDropDown" label="Select a destination" hidden="{{!_showTargets}}">
-            <paper-listbox class="dropdown-content" selected="{{selectedTarget}}">
-                <template is="dom-repeat" items="[[targets]]">
-                    <paper-item>[[item.title]]</paper-item>
-                </template>
-            </paper-listbox>
-        </paper-dropdown-menu>
+        <template is="dom-if" if="{{!_onAirState}}">
+            <paper-dropdown-menu id="targetsDropDown" label="Select a destination" hidden="{{!_showTargets}}">
+                <paper-listbox class="dropdown-content" selected="{{selectedTarget}}">
+                    <template is="dom-repeat" items="[[targets]]">
+                        <paper-item>[[item.title]]</paper-item>
+                    </template>
+                </paper-listbox>
+            </paper-dropdown-menu>
 
-        <paper-dropdown-menu id="privacyDropDown" label="Who should see this ?" hidden="{{!_showPrivacy}}">
-            <paper-listbox class="dropdown-content" selected="{{selectedPrivacy}}">
-                <paper-item>Public</paper-item>
-                <paper-item>Friends</paper-item>
-                <paper-item>Only me</paper-item>
-            </paper-listbox>
-        </paper-dropdown-menu>
+            <paper-dropdown-menu id="privacyDropDown" label="Who should see this ?" hidden="{{!_showPrivacy}}">
+                <paper-listbox class="dropdown-content" selected="{{selectedPrivacy}}">
+                    <paper-item>
+                        <paper-item-body two-line>
+                            <div>Public</div>
+                            <div secondary>Anyone on or off facebook</div>
+                        </paper-item-body>
+                    </paper-item>
+                    <paper-item>
+                        <paper-item-body two-line>
+                            <div>Friends</div>
+                            <div secondary>Your friends on Facebook</div>
+                        </paper-item-body>
+                    </paper-item>
+                    <paper-item>
+                        <paper-item-body two-line>
+                            <div>Only me</div>
+                            <div secondary>Only me</div>
+                        </paper-item-body>
+                    </paper-item>
+                </paper-listbox>
+            </paper-dropdown-menu>
 
 
-        <paper-dropdown-menu id="pagesDropDown" label="Select a Page" hidden="{{!_showPages}}">
-            <paper-listbox class="dropdown-content" selected="{{selectedPage}}">
-                <template is="dom-repeat" items="[[_userInfo.accounts]]">
-                    <paper-item>[[item.name]]</paper-item>
-                </template>
-            </paper-listbox>
-        </paper-dropdown-menu>
+            <paper-dropdown-menu id="pagesDropDown" label="Select a Page" hidden="{{!_showPages}}">
+                <paper-listbox class="dropdown-content" selected="{{selectedPage}}">
+                    <template is="dom-repeat" items="[[_userInfo.accounts]]">
+                        <paper-item>[[item.name]]</paper-item>
+                    </template>
+                </paper-listbox>
+            </paper-dropdown-menu>
 
-        <paper-button raised class="custom indigo"
-                      hidden="{{!_readyToStream}}"
-                      on-tap="_goLive">
-            <!--<iron-icon icon="play"></iron-icon>-->
-            Go Live
-        </paper-button>
+            <paper-button raised class="custom indigo"
+                          hidden="{{!_readyToStream}}"
+                          on-tap="_goLive">
+                <iron-icon icon="av:play-circle-outline"></iron-icon>
+                Go Live
+            </paper-button>
+        </template>
+
+        <template is="dom-if" if="{{_onAirState}}">
+
+            <paper-button raised class="custom indigo"
+                          on-tap="_openLiveStream">
+                <iron-icon icon="av:remove-from-queue"></iron-icon>
+                View the live stream
+            </paper-button>
+
+            <paper-button raised class="custom stop"
+                          on-tap="_stopLiveStream">
+                <iron-icon icon="av:stop"></iron-icon>
+                Stop live stream
+            </paper-button>
+        </template>
 
     </template>
 
@@ -94,6 +149,32 @@ Manages Facebook live settings
                     value: {
                         name: " please login first"
                     }
+                },
+
+                /**
+                 *  This id is either the user_id, or a page ID, or an event ID
+                 *  Set it in order to indicate that there's a live event going on air for it.
+                 *
+                 *  Resources are assumed to have a single live event.
+                 *  If for some unexpected reasons there are more than 1 live event, the first one will be managed.
+                 */
+                streamingResourceId: {
+                    type: String,
+                    value: null,
+                    notify: true,
+                    observer: '_streamingResourceIdChanged'
+                },
+                /**
+                 * The corresponding user, page or event details,
+                 * along with their LIVE event info.
+                 *  {
+                 *      "resource": {...}
+                 *      "stream": {...}
+                 *   }
+                 */
+                _streamingResource: {
+                    type: Object,
+                    value: null
                 },
 
                 targets: {
@@ -162,7 +243,14 @@ Manages Facebook live settings
                     type: Boolean,
                     value: false,
                     notify: true
-                }
+                },
+
+                _onAirState: {
+                    type: Boolean,
+                    value: false,
+                    notify: true
+                },
+
             },
 
             _userIDChanged: function (newValue, oldValue) {
@@ -187,9 +275,10 @@ Manages Facebook live settings
 
                 });
 
-                FB.api('/' + scope.userID + '/accounts', function (accounts) {
+                FB.api('/me/accounts', function (accounts) {
                     console.log(accounts);
                     scope.set('_userInfo.accounts', accounts.data);
+                    scope._streamingResourceIdChanged(scope.streamingResourceId);
                 });
             },
 
@@ -233,6 +322,89 @@ Manages Facebook live settings
                 }
             },
 
+            _streamingResourceIdChanged: function (newValue, oldValue) {
+                console.log("_streamingResourceIdChanged:" + newValue);
+                if (newValue == "" || newValue == null) {
+                    // back to the menu
+                    return;
+                }
+                var found = false;
+                var streamingResource;
+                // map the newValue to one of the discovered resources
+                if (newValue == this.userID) {
+                    found = true;
+                    streamingResource = {
+                        id: this.userID
+                    }
+                }
+                if (!found) {
+                    // check pages
+                    this._userInfo.accounts = this._userInfo.accounts || [];
+                    for (var p = 0; p < this._userInfo.accounts.length; p++) {
+                        var pg = this._userInfo.accounts[p];
+                        if (newValue == pg.id) {
+                            found = true;
+                            streamingResource = pg;
+                            break;
+                        }
+                    }
+                }
+                if (!found) {
+                    // check events
+                    // TODO:
+                }
+
+                //switch state
+                this._onAirState = found;
+                if (found == true) {
+                    var scope = this;
+                    this._streamingResource = {
+                        resource: streamingResource
+                    };
+                    // find the first live event
+                    this._getLiveStreamOnResource(streamingResource,
+                            function (stream) {
+                                /** stream found **/
+                                scope._streamingResource.stream = stream;
+                            },
+                            function () {
+                                /** stream not found **/
+                                console.log("No live stream found for resource:" + streamingResource);
+                                // the live stream might have ended right in this time
+                                // we can switch back to the config UI
+                                // TBD: if this is confusing for the end user
+                                scope._onAirState = true;
+                            });
+                }
+            },
+
+            /**
+             * Returns the first stream with status: LIVE in resource.
+             * @param resource A User, Page, or Event info
+             * @param foundCallback -  called when a LIVE resource is found
+             * @param notFoundCallback - called if a LIVE resource is not found
+             * @private
+             */
+            _getLiveStreamOnResource: function (resource, foundCallback, notFoundCallback) {
+                FB.api('/' + resource.id + '/live_videos', 'get',
+                        {
+                            access_token: resource.access_token
+                        },
+                        function (streams) {
+                            if (streams.data === null || typeof(streams.data) === "undefined") {
+                                return;
+                            }
+                            var streams_data = streams.data;
+                            for (var s = 0; s < streams_data.length; s++) {
+                                if (streams_data[s].status == "LIVE") {
+                                    return foundCallback(streams_data[s]);
+                                }
+                            }
+
+                            return notFoundCallback();
+                        });
+            },
+
             // API DOCS: https://developers.facebook.com/docs/videos/live-video/getting-started#creating
             _goLive: function () {
                 var scope = this;
@@ -241,26 +413,90 @@ Manages Facebook live settings
                     case "timeline":
                         // post a live event on the timeline
                         // POST /{user_id}/live_videos
-                        FB.api('/' + this.userID + '/live_videos', "POST",
-                                function (stream) {
-                                    scope.fire('streaming', stream);
-                                });
+                        var selectedUser = {
+                            id: this.userID
+                        };
+                        this._postLiveStreamOnResource(selectedUser);
                         break;
                     case "page":
                         // post a live event on the selected page
                         // this.fire('kick', {kicked: true});
                         // POST /{page_id}/live_videos
-                        var selectedAccount = scope._userInfo.accounts[scope.selectedPage].id;
-                        FB.api('/' + selectedAccounts + '/live_videos', "POST",
-                                function (stream) {
-                                    scope.fire('streaming', stream);
-                                });
+                        var selectedAccount = scope._userInfo.accounts[scope.selectedPage];
+                        this._postLiveStreamOnResource(selectedAccount);
                         break;
                     case "event":
                         // TODO: post a live event on the selected event
                         // POST /{event_id}/live_videos
                         break;
                 }
+            },
+
+            _postLiveStreamOnResource: function (resource) {
+                var scope = this;
+
+                // first check to see if there is a live stream on-going already
+                this._getLiveStreamOnResource(resource,
+                        function (stream) {
+                            scope.fire('conflict', {
+                                stream: stream,
+                                // this is going to be the identifier
+                                // used when checking if there's an existing live-stream
+                                resourceId: resource.id
+                            });
+                        },
+                        function () {
+                            FB.api('/' + resource.id + '/live_videos', "post",
+                                    {
+                                        access_token: resource.access_token
+                                    },
+                                    function (stream) {
+                                        scope.fire('streaming', {
+                                            stream: stream,
+                                            // this is going to be the identifier
+                                            // used when checking if there's an existing live-stream
+                                            resourceId: resource.id
+                                        });
+                                    });
+                        });
+            },
+
+            _openLiveStream: function () {
+                var stream = this._streamingResource.stream;
+                if (stream.embed_html !== null) {
+                    const regex = /src=\"(.+?[^"])\"/g;
+                    const str = stream.embed_html;
+                    var m;
+
+                    while ((m = regex.exec(str)) !== null) {
+                        // This is necessary to avoid infinite loops with zero-width matches
+                        if (m.index === regex.lastIndex) {
+                            regex.lastIndex++;
+                        }
+
+                        if (m[1] !== null) {
+                            window.open(m[1],'_blank');
+                            return;
+                        }
+                    }
+                }
+                alert("Could not open the live stream.");
+            },
+
+            _stopLiveStream: function () {
+                var stream = this._streamingResource.stream;
+                var res = this._streamingResource.resource;
+                var scope = this;
+                console.log("Ending live stream with id:" + stream.id + " from resource id:" + res.id);
+                FB.api('/' + stream.id + '?end_live_video=true' , 'post',
+                        {
+                            access_token: res.access_token
+                        },
+                        function(result) {
+                            console.log("stopped video.");
+                            console.log(result);
+                            scope.fire('stop', scope._streamingResource);
+                        });
             }
 
         });

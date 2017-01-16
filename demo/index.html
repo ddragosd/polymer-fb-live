@@ -77,11 +77,31 @@
       function onStreamCreatedHandler(stream) {
           console.log("fb-live has created a new stream in Facebook.");
           console.log(stream.detail);
+          // invoke some backend APIs and in the end confirm back with the same
+          // stream.detail.resourceId
+          var fb_live = document.querySelector('#fb_live');
+          fb_live.setAttribute("streaming-resource-id", stream.detail.resourceId);
+      }
+
+      function onStreamConflictHandler(stream) {
+          console.log("fb-live discovered a conflict in the live streams");
+          console.log(stream);
+          alert("You can only stream to Facebook destinations that don't have an existing live stream on air.");
+          var fb_live = document.querySelector('#fb_live');
+          fb_live.setAttribute("streaming-resource-id", stream.detail.resourceId);
+      }
+
+      function onStreamStopHandler(streamingResource) {
+          console.log("fb-live has stopped the live stream.");
+          var fb_live = document.querySelector('#fb_live');
+          fb_live.setAttribute("streaming-resource-id", null);
       }
 
       window.addEventListener('WebComponentsReady', function(e) {
           var fb_live = document.querySelector('#fb_live');
           fb_live.addEventListener("streaming", onStreamCreatedHandler);
+          fb_live.addEventListener("stop", onStreamStopHandler);
+          fb_live.addEventListener("conflict", onStreamConflictHandler);
       });
 
   </script>
