@@ -2,7 +2,10 @@
 <link rel="import" href="../paper-item/paper-item.html">
 <link rel="import" href="../paper-listbox/paper-listbox.html">
 <link rel="import" href="../paper-tabs/paper-tabs.html">
+<link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+
 
 <!--
 `fb-live`
@@ -17,6 +20,22 @@ Manages Facebook live settings
             :host {
                 display: block;
             }
+
+            .container {
+                @apply(--layout-horizontal);
+                @apply(--layout-wrap);
+            }
+
+            paper-button.indigo {
+                background-color: var(--paper-indigo-500);
+                color: white;
+                --paper-button-raised-keyboard-focus: {
+                    background-color: var(--paper-pink-a200) !important;
+                    color: white !important;
+                };
+            }
+
+
         </style>
         <h2>Hello [[_userInfo.name]] </h2>
 
@@ -29,7 +48,7 @@ Manages Facebook live settings
         </paper-dropdown-menu>
 
         <paper-dropdown-menu id="privacyDropDown" label="Who should see this ?" hidden="{{!_showPrivacy}}">
-            <paper-listbox class="dropdown-content">
+            <paper-listbox class="dropdown-content" selected="{{selectedPrivacy}}">
                 <paper-item>Public</paper-item>
                 <paper-item>Friends</paper-item>
                 <paper-item>Only me</paper-item>
@@ -38,12 +57,17 @@ Manages Facebook live settings
 
 
         <paper-dropdown-menu id="pagesDropDown" label="Select a Page" hidden="{{!_showPages}}">
-            <paper-listbox class="dropdown-content">
+            <paper-listbox class="dropdown-content" selected="{{selectedPage}}">
                 <template is="dom-repeat" items="[[_userInfo.accounts]]">
                     <paper-item>[[item.name]]</paper-item>
                 </template>
             </paper-listbox>
         </paper-dropdown-menu>
+
+        <paper-button raised class="custom indigo">
+            <!--<iron-icon icon="play"></iron-icon>-->
+            Go Live
+        </paper-button>
 
     </template>
 
@@ -86,6 +110,7 @@ Manages Facebook live settings
                     ],
                     notify: true
                 },
+
                 selectedTarget: {
                     type: Number,
                     value: 0,
@@ -93,24 +118,37 @@ Manages Facebook live settings
                     observer: '_selectedTargetChanged'
                 },
 
+                selectedPrivacy: {
+                    type: Number,
+                    value: 0,
+                    notify: true
+                },
+                selectedPage: {
+                    type: Number,
+                    value: -1,
+                    notify: true
+                },
+
                 _showTargets: {
                     type: Boolean,
-                    value:false,
+                    value: false,
                     notify: true,
                 },
                 _showPrivacy: {
                     type: Boolean,
-                    value:false,
+                    value: false,
                     notify: true,
                 },
+
                 _showPages: {
                     type: Boolean,
-                    value:false,
+                    value: false,
                     notify: true,
                 },
-                _showEvents:{
+
+                _showEvents: {
                     type: Boolean,
-                    value:false,
+                    value: false,
                     notify: true,
                 }
             },
@@ -130,9 +168,11 @@ Manages Facebook live settings
                 }
 
                 scope._showTargets = true;
+                scope._showPrivacy = true;
 
                 FB.api('/me', function (response) {
                     scope._userInfo = response;
+
                 });
 
                 FB.api('/' + scope.userID + '/accounts', function (accounts) {
@@ -145,7 +185,7 @@ Manages Facebook live settings
                 console.log("Selected value is now: " + this.targets[newValue].type);
                 switch (this.targets[newValue].type) {
                     case "timeline":
-                        this._showPrivacy = true;
+                        this._showPrivacy = (this.userID !== 0);
                         this._showPages = false;
                         this._showEvents = true;
                         break;
