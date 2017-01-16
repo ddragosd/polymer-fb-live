@@ -20,11 +20,13 @@
   <script type="text/javascript">
       window.fbAsyncInit = function () {
           FB.init({
-              appId: '1905352743027825',
+              appId: 'change-me',
               xfbml: true,
               version: 'v2.6',
               enable_profile_selector: true,
           });
+
+          checkLoginState();
       };
       // FB.AppEvents.logPageView();
 
@@ -85,7 +87,7 @@
 
       <demo-snippet>
         <template>
-          <fb-live id="fb_live" targets='["My timeline", "Pages"]' selected-target="1"></fb-live>
+          <fb-live id="fb_live" selected-target="0"></fb-live>
         </template>
       </demo-snippet>
     </div>

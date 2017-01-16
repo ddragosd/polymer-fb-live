@@ -12,93 +12,157 @@ Manages Facebook live settings
 -->
 
 <dom-module id="fb-live">
-  <template>
-    <style>
-      :host {
-        display: block;
-      }
-    </style>
-    <h2>Hello [[_userInfo.name]] </h2>
-
-    <paper-dropdown-menu label="Select a destination">
-      <paper-listbox class="dropdown-content" selected="{{selectedTarget}}">
-        <template is="dom-repeat" items="[[targets]]">
-          <paper-item>[[item]]</paper-item>
-        </template>
-      </paper-listbox>
-    </paper-dropdown-menu>
-
-    <paper-dropdown-menu label="Select a Page">
-      <paper-listbox class="dropdown-content">
-        <template is="dom-repeat" items="[[_userInfo.accounts]]">
-          <paper-item>[[item.name]]</paper-item>
-        </template>
-      </paper-listbox>
-    </paper-dropdown-menu>
-
-  </template>
-
-  <script>
-    Polymer({
-
-      is: 'fb-live',
-
-      //https://www.polymer-project.org/1.0/docs/devguide/properties
-      properties: {
-        //
-        userID: {
-          type: String,
-          value: 0,
-          notify:true,
-          observer: '_userIDChanged'
-        },
-        _userInfo: {
-            type: Object,
-            value: {
-                name: ", please login first"
+    <template>
+        <style>
+            :host {
+                display: block;
             }
-        },
-        targets: {
-            type: Array,
-            value: ["My timeline", "Pages", "Events"],
-            notify: true
-        },
-        selectedTarget: {
-            type:Number,
-            value: 0,
-            notify:true,
-            observer: '_selectedTargetChanged'
-        }
-      },
+        </style>
+        <h2>Hello [[_userInfo.name]] </h2>
 
-      _userIDChanged: function(newValue, oldValue) {
-          var scope = this;
-          if ( null == window['FB']) {
-              return;
-          }
+        <paper-dropdown-menu id="targetsDropDown" label="Select a destination" hidden="{{!_showTargets}}">
+            <paper-listbox class="dropdown-content" selected="{{selectedTarget}}">
+                <template is="dom-repeat" items="[[targets]]">
+                    <paper-item>[[item.title]]</paper-item>
+                </template>
+            </paper-listbox>
+        </paper-dropdown-menu>
 
-          FB.api('/me', function (response) {
-              scope._userInfo = response;
-          });
-
-          FB.api('/' + scope.userID + '/accounts', function(accounts){
-              console.log(accounts);
-              scope.set('_userInfo.accounts', accounts.data);
-          });
-      },
-
-      _selectedTargetChanged: function(newValue, oldValue) {
-          console.log("Selected value is now: " + newValue);
-          switch (newValue) {
-              case 0:
-                  break;
-              case 1:
-                  break;
-          }
-      },
+        <paper-dropdown-menu id="privacyDropDown" label="Who should see this ?" hidden="{{!_showPrivacy}}">
+            <paper-listbox class="dropdown-content">
+                <paper-item>Public</paper-item>
+                <paper-item>Friends</paper-item>
+                <paper-item>Only me</paper-item>
+            </paper-listbox>
+        </paper-dropdown-menu>
 
 
+        <paper-dropdown-menu id="pagesDropDown" label="Select a Page" hidden="{{!_showPages}}">
+            <paper-listbox class="dropdown-content">
+                <template is="dom-repeat" items="[[_userInfo.accounts]]">
+                    <paper-item>[[item.name]]</paper-item>
+                </template>
+            </paper-listbox>
+        </paper-dropdown-menu>
 
-    });
-  </script>
+    </template>
+
+    <script>
+        Polymer({
+
+            is: 'fb-live',
+
+            //https://www.polymer-project.org/1.0/docs/devguide/properties
+            properties: {
+                //
+                userID: {
+                    type: String,
+                    value: 0,
+                    notify: true,
+                    observer: '_userIDChanged'
+                },
+                _userInfo: {
+                    type: Object,
+                    value: {
+                        name: ", please login first"
+                    }
+                },
+
+                targets: {
+                    type: Array,
+                    value: [
+                        {
+                            type: "timeline",
+                            title: "Share on your timeline",
+                        },
+                        {
+                            type: "page",
+                            title: "Share on a page you manage"
+                        },
+                        {
+                            type: "event",
+                            title: "Share on an event"
+                        }
+                    ],
+                    notify: true
+                },
+                selectedTarget: {
+                    type: Number,
+                    value: 0,
+                    notify: true,
+                    observer: '_selectedTargetChanged'
+                },
+
+                _showTargets: {
+                    type: Boolean,
+                    value:false,
+                    notify: true,
+                },
+                _showPrivacy: {
+                    type: Boolean,
+                    value:false,
+                    notify: true,
+                },
+                _showPages: {
+                    type: Boolean,
+                    value:false,
+                    notify: true,
+                },
+                _showEvents:{
+                    type: Boolean,
+                    value:false,
+                    notify: true,
+                }
+            },
+
+            _userIDChanged: function (newValue, oldValue) {
+                var scope = this;
+                if (null == window['FB']) {
+                    return;
+                }
+
+                if (newValue === null || typeof(newValue) === "undefined") {
+                    scope._showTargets = false;
+                    scope._showPrivacy = false;
+                    scope._showPages = false;
+                    scope._showEvents = false;
+                    return;
+                }
+
+                scope._showTargets = true;
+
+                FB.api('/me', function (response) {
+                    scope._userInfo = response;
+                });
+
+                FB.api('/' + scope.userID + '/accounts', function (accounts) {
+                    console.log(accounts);
+                    scope.set('_userInfo.accounts', accounts.data);
+                });
+            },
+
+            _selectedTargetChanged: function (newValue, oldValue) {
+                console.log("Selected value is now: " + this.targets[newValue].type);
+                switch (this.targets[newValue].type) {
+                    case "timeline":
+                        this._showPrivacy = true;
+                        this._showPages = false;
+                        this._showEvents = true;
+                        break;
+                    case "page":
+                        this._showPrivacy = false;
+                        this._showPages = true;
+                        this._showEvents = true;
+                        break;
+                    case "event":
+                        this._showPrivacy = false;
+                        this._showPages = false;
+                        this._showEvents = true;
+                        break;
+                }
+            },
+
+
+        });
+    </script>
 </dom-module>
