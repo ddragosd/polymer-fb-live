@@ -73,6 +73,17 @@
               fb_statusChangeCallback(response);
           });
       }
+
+      function onStreamCreatedHandler(stream) {
+          console.log("fb-live has created a new stream in Facebook.");
+          console.log(stream.detail);
+      }
+
+      window.addEventListener('WebComponentsReady', function(e) {
+          var fb_live = document.querySelector('#fb_live');
+          fb_live.addEventListener("streaming", onStreamCreatedHandler);
+      });
+
   </script>
 
   <div class="vertical-section-container centered" style="height:50px">

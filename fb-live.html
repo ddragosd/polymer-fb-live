@@ -37,7 +37,9 @@ Manages Facebook live settings
 
 
         </style>
-        <h2>Hello [[_userInfo.name]] </h2>
+        <!--<h2>Hello [[_userInfo.name]] </h2>-->
+
+        <div class="floated-label-placeholder style-scope paper-input-container">Logged in as: [[_userInfo.name]]</div>
 
         <paper-dropdown-menu id="targetsDropDown" label="Select a destination" hidden="{{!_showTargets}}">
             <paper-listbox class="dropdown-content" selected="{{selectedTarget}}">
@@ -64,7 +66,9 @@ Manages Facebook live settings
             </paper-listbox>
         </paper-dropdown-menu>
 
-        <paper-button raised class="custom indigo">
+        <paper-button raised class="custom indigo"
+                      hidden="{{!_readyToStream}}"
+                      on-tap="_goLive">
             <!--<iron-icon icon="play"></iron-icon>-->
             Go Live
         </paper-button>
@@ -88,7 +92,7 @@ Manages Facebook live settings
                 _userInfo: {
                     type: Object,
                     value: {
-                        name: ", please login first"
+                        name: " please login first"
                     }
                 },
 
@@ -97,7 +101,7 @@ Manages Facebook live settings
                     value: [
                         {
                             type: "timeline",
-                            title: "Share on your timeline",
+                            title: "Share on your timeline"
                         },
                         {
                             type: "page",
@@ -121,12 +125,14 @@ Manages Facebook live settings
                 selectedPrivacy: {
                     type: Number,
                     value: 0,
-                    notify: true
+                    notify: true,
+                    observer: '_selectedPrivacyChanged'
                 },
                 selectedPage: {
                     type: Number,
                     value: -1,
-                    notify: true
+                    notify: true,
+                    observer: '_selectedPageChanged'
                 },
 
                 _showTargets: {
@@ -150,6 +156,12 @@ Manages Facebook live settings
                     type: Boolean,
                     value: false,
                     notify: true,
+                },
+
+                _readyToStream: {
+                    type: Boolean,
+                    value: false,
+                    notify: true
                 }
             },
 
@@ -182,17 +194,20 @@ Manages Facebook live settings
             },
 
             _selectedTargetChanged: function (newValue, oldValue) {
-                console.log("Selected value is now: " + this.targets[newValue].type);
+                var currentTarget = this.targets[newValue].type;
+                console.log("Selected value is now: " + currentTarget);
                 switch (this.targets[newValue].type) {
                     case "timeline":
                         this._showPrivacy = (this.userID !== 0);
                         this._showPages = false;
                         this._showEvents = true;
+                        this._readyToStream = this.selectedPrivacy >= 0;
                         break;
                     case "page":
                         this._showPrivacy = false;
                         this._showPages = true;
                         this._showEvents = true;
+                        this._readyToStream = this.selectedPage >= 0;
                         break;
                     case "event":
                         this._showPrivacy = false;
@@ -202,6 +217,51 @@ Manages Facebook live settings
                 }
             },
 
+            _selectedPrivacyChanged: function (newValue, oldValue) {
+                var currentTarget = this.targets[this.selectedTarget].type;
+                console.log("_selectedPrivacyChanged:" + newValue + ";" + currentTarget);
+                if (newValue >= 0 && currentTarget == "timeline") {
+                    this._readyToStream = true;
+                }
+            },
+
+            _selectedPageChanged: function (newValue, oldValue) {
+                var currentTarget = this.targets[this.selectedTarget].type;
+                console.log("_selectedPageChanged:" + newValue + ";" + currentTarget);
+                if (newValue >= 0 && currentTarget == "page") {
+                    this._readyToStream = true;
+                }
+            },
+
+            // API DOCS: https://developers.facebook.com/docs/videos/live-video/getting-started#creating
+            _goLive: function () {
+                var scope = this;
+                var currentTarget = this.targets[this.selectedTarget].type;
+                switch (currentTarget) {
+                    case "timeline":
+                        // post a live event on the timeline
+                        // POST /{user_id}/live_videos
+                        FB.api('/' + this.userID + '/live_videos', "POST",
+                                function (stream) {
+                                    scope.fire('streaming', stream);
+                                });
+                        break;
+                    case "page":
+                        // post a live event on the selected page
+                        // this.fire('kick', {kicked: true});
+                        // POST /{page_id}/live_videos
+                        var selectedAccount = scope._userInfo.accounts[scope.selectedPage].id;
+                        FB.api('/' + selectedAccounts + '/live_videos', "POST",
+                                function (stream) {
+                                    scope.fire('streaming', stream);
+                                });
+                        break;
+                    case "event":
+                        // TODO: post a live event on the selected event
+                        // POST /{event_id}/live_videos
+                        break;
+                }
+            }
 
         });
     </script>
